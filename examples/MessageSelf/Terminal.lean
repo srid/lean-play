@@ -318,18 +318,18 @@ private def banner (size : Dimensions) (path : System.FilePath) (count : Nat) : 
   ]
 
 private def composer (size : Dimensions) (input : String) : List String × Nat :=
-  let width := outerWidth size
+  let width := outerWidth size - 2
   let innerWidth := width - 2
   let label := "Message  YOURSELF"
   let top := Ansi.violet "╭─" ++ " " ++ Ansi.amber "Message" ++ "  " ++
     Ansi.dim "YOURSELF" ++ " " ++
-    Ansi.violet (repeatText (width - label.length - 4) "─" ++ "╮")
+    Ansi.violet (repeatText (width - label.length - 5) "─" ++ "╮")
   let capacity := innerWidth - 3
   let visibleInput := takeRight capacity input
   let body := Ansi.violet "│" ++ " " ++ Ansi.amber "❯" ++ " " ++
     padRight capacity visibleInput ++ Ansi.violet "│"
   let bottom := Ansi.violet (border width "╰" "─" "╯")
-  ([top, body, bottom], 5 + visibleInput.length)
+  ([top ++ "  ", body ++ "  ", bottom ++ "  "], 5 + visibleInput.length)
 
 def render
     (size : Dimensions)
