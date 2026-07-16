@@ -16,6 +16,7 @@ private structure State where
   size : Terminal.Dimensions
   today : String
   expandedDays : Array String := #[]
+  draggingScrollbar : Bool := false
 
 private def toggleDay (days : Array String) (day : String) : Array String :=
   if days.contains day then days.filter (· != day) else days.push day
@@ -62,14 +63,28 @@ private partial def eventLoop
   | .pageDown =>
       let page := Terminal.viewportHeight state.size
       eventLoop tty path { state with scroll := state.scroll - page }
-  | .click row _ =>
-      match Terminal.dayAtRow state.size state.entries state.today state.expandedDays
-          state.scroll row with
-      | some day =>
-          let expandedDays := toggleDay state.expandedDays day
-          let scroll := anchoredScroll state expandedDays
-          eventLoop tty path { state with expandedDays, scroll }
-      | none => eventLoop tty path state false
+  | .mouseDown row column =>
+      if Terminal.isScrollbarHit state.size row column then
+        let scroll := Terminal.scrollAtScrollbarRow state.size state.entries state.today
+          state.expandedDays row
+        eventLoop tty path { state with scroll, draggingScrollbar := true }
+      else
+        match Terminal.dayAtRow state.size state.entries state.today state.expandedDays
+            state.scroll row with
+        | some day =>
+            let expandedDays := toggleDay state.expandedDays day
+            let scroll := anchoredScroll state expandedDays
+            eventLoop tty path { state with expandedDays, scroll }
+        | none => eventLoop tty path state false
+  | .mouseDrag row _ =>
+      if state.draggingScrollbar then
+        let scroll := Terminal.scrollAtScrollbarRow state.size state.entries state.today
+          state.expandedDays row
+        eventLoop tty path { state with scroll }
+      else
+        eventLoop tty path state false
+  | .mouseUp =>
+      eventLoop tty path { state with draggingScrollbar := false } false
   | .enter =>
       let message := state.input.trimAscii.toString
       match message with

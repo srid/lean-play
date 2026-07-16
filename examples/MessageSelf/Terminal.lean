@@ -10,8 +10,8 @@ def enterScreen : String := "\x1b[?1049h\x1b[2J\x1b[H"
 def leaveScreen : String := "\x1b[?1049l"
 def hideCursor : String := "\x1b[?25l"
 def showCursor : String := "\x1b[?25h"
-def enableMouse : String := "\x1b[?1000h\x1b[?1006h"
-def disableMouse : String := "\x1b[?1000l\x1b[?1006l"
+def enableMouse : String := "\x1b[?1000h\x1b[?1002h\x1b[?1006h"
+def disableMouse : String := "\x1b[?1000l\x1b[?1002l\x1b[?1006l"
 
 def styled (code text : String) : String := s!"\x1b[{code}m{text}{reset}"
 def dim (text : String) : String := styled "2" text
@@ -38,7 +38,9 @@ inductive Key where
   | wheelDown
   | pageUp
   | pageDown
-  | click (row column : Nat)
+  | mouseDown (row column : Nat)
+  | mouseDrag (row column : Nat)
+  | mouseUp
   | quit
   | idle
 deriving Repr
@@ -143,10 +145,13 @@ private partial def readMouse
         readMouse tty (current :: fieldsRev) 0
       else if value == 77 then
         match (current :: fieldsRev).reverse with
-        | [0, column, row] => pure (.click row column)
+        | [0, column, row] => pure (.mouseDown row column)
+        | [32, column, row] => pure (.mouseDrag row column)
         | [64, _, _] => pure .wheelUp
         | [65, _, _] => pure .wheelDown
         | _ => pure .idle
+      else if value == 109 then
+        pure .mouseUp
       else
         pure .idle
   | none => pure .idle
@@ -187,6 +192,10 @@ private def outerWidth (size : Dimensions) : Nat :=
 
 def viewportHeight (size : Dimensions) : Nat :=
   max 1 (size.rows - 9)
+
+def isScrollbarHit (size : Dimensions) (row column : Nat) : Bool :=
+  let height := viewportHeight size
+  outerWidth size ≤ column && 7 ≤ row && row < height + 7
 
 private def entryLines (width : Nat) (entry : Entry) : List String :=
   let innerWidth := width - 4
@@ -252,6 +261,17 @@ def maxScroll
     (today : String) (expandedDays : Array String) : Nat :=
   (historyLines size entries today expandedDays).size - viewportHeight size
 
+def scrollAtScrollbarRow
+    (size : Dimensions) (entries : Array Entry)
+    (today : String) (expandedDays : Array String) (screenRow : Nat) : Nat :=
+  let limit := maxScroll size entries today expandedDays
+  let height := viewportHeight size
+  if limit == 0 || height ≤ 1 then
+    0
+  else
+    let trackRow := min (height - 1) (screenRow - 7)
+    limit - (trackRow * limit / (height - 1))
+
 def dayAtRow
     (size : Dimensions) (entries : Array Entry)
     (today : String) (expandedDays : Array String)
@@ -293,7 +313,7 @@ private def banner (size : Dimensions) (path : System.FilePath) (count : Nat) : 
     Ansi.violet "│" ++ title ++ Ansi.violet "│",
     Ansi.violet "│" ++ Ansi.dim (padRight innerWidth s!" {path} • {count} saved messages") ++ Ansi.violet "│",
     Ansi.violet (border width "╰" "─" "╯"),
-    Ansi.dim "  Click days • Wheel/↑/↓ scroll • PgUp/PgDn page • Ctrl-C quits",
+    Ansi.dim "  Click days • Drag scrollbar • Wheel/↑/↓ scroll • Ctrl-C quits",
     ""
   ]
 
