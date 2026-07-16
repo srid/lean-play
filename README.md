@@ -32,7 +32,6 @@ just run Markdown README.md
 - [x] A minimal `examples/Hello.lean` program
 - [x] A single-file terminal Markdown renderer
 - [x] A local, JSONL-backed message-to-self TUI
-- [x] A self-paced Lean guide for Haskell programmers
 - [ ] Your next Lean experiment
 
 ### Message yourself
@@ -51,8 +50,9 @@ just run MessageSelf work-notes.jsonl
 ```
 
 The full-screen TUI keeps its composer fixed while the message history scrolls.
-Use ↑/↓ or Page Up/Page Down to navigate, and `/help`, `/clear`, or `/quit` for
-commands. The JSONL file remains easy to inspect or process with other tools.
+Use the mouse wheel, ↑/↓, or Page Up/Page Down to navigate. Today is expanded
+while previous days are collapsed; click a day to toggle it. The JSONL remains
+easy to inspect.
 
 ### Markdown renderer
 
